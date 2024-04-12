@@ -60,7 +60,7 @@ for f in glob.iglob(args.input_path + "validation/val/*"):
         continue
     i = i + 1
 
-    print('Processing image: {} {}'.format(i, f))
+    #print('Processing image: {} {}'.format(i, f))
     img = Image.open(f).convert('RGB')
     w, h = img.size
 
@@ -99,8 +99,8 @@ for f in glob.iglob(args.input_path + "validation/val/*"):
     pred = net.blobs['prob'].data[0]
     pred_ids = np.argsort(pred)[-5:][::-1]
 
-    print("Top 1 prediction: ",  label_dict[str(pred_ids[0])][1], ", Confidence score: ", str(np.max(pred)))
-    print("Top 5 predictions: ", [label_dict[str(pred_ids[k])][1] for k in range(5)])
+    #print("Top 1 prediction: ",  label_dict[str(pred_ids[0])][1], ", Confidence score: ", str(np.max(pred)))
+    #print("Top 5 predictions: ", [label_dict[str(pred_ids[k])][1] for k in range(5)])
 
     correct = correct + (label_dict[str(pred_ids[0])][0] in f)
 
@@ -112,14 +112,18 @@ for f in glob.iglob(args.input_path + "validation/val/*"):
     adv_pred = net.blobs['prob'].data[0]
     adv_pred_ids = np.argsort(adv_pred)[-5:][::-1]
 
-    print("Adv Top 1 prediction: ",  label_dict[str(adv_pred_ids[0])][1], ", Confidence score: ", str(np.max(pred)))
-    print("Adv Top 5 predictions: ", [label_dict[str(adv_pred_ids[k])][1] for k in range(5)])
+    #print("Adv Top 1 prediction: ",  label_dict[str(adv_pred_ids[0])][1], ", Confidence score: ", str(np.max(pred)))
+    #print("Adv Top 5 predictions: ", [label_dict[str(adv_pred_ids[k])][1] for k in range(5)])
 
     adv_correct = adv_correct + (label_dict[str(adv_pred_ids[0])][0] in f)
     adv_success = adv_success + (adv_pred_ids[0] == args.target_class)
 
     total = total + 1
 
-print('Clean sample top 1 accuracy: {}%'.format(correct / total * 100.))
-print('Adv sample top 1 accuracy: {}%'.format(adv_correct / total * 100.))
-print('Attack success rate: {}%'.format(adv_success / total * 100.))
+    if total % 100 == 0:
+        print('sample: {}, acc: {:.2f}, adv acc: {:.2f}, asr: {:.2f}.'.format(total, correct / total * 100.,
+                                                          adv_correct / total * 100., adv_success / total * 100.))
+
+print('Clean sample top 1 accuracy: {:.2f}%'.format(correct / total * 100.))
+print('Adv sample top 1 accuracy: {:.2f}%'.format(adv_correct / total * 100.))
+print('Attack success rate: {:.2f}%'.format(adv_success / total * 100.))
