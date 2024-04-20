@@ -42,11 +42,10 @@ net.blobs['data'].reshape(1,         # batch size
                           img_crop, img_crop)
 
 uap_fn = os.path.join(args.uap_path, 'uap_' + str(args.target_class) + '.npy')
-mean = [104 / 255, 117 / 255, 123 / 255]    #RGB
-std = [1/255, 1/255, 1/255]
+mean = [104 / 255, 117 / 255, 123 / 255]    #BGR
+std = [1 / 255, 1 / 255, 1 / 255]
 uap = (np.load(uap_fn) - np.array(mean).reshape(1, 3, 1, 1)) / np.array(std).reshape(1, 3, 1, 1)
 uap = np.squeeze(uap, axis=0)
-uap = uap[[2, 1, 0], :, :] #BGR
 #print('[DEBUG] uap size: {}'.format(uap.shape))
 
 correct = 0
@@ -54,6 +53,7 @@ adv_correct = 0
 adv_success = 0
 i = 0
 total = 0
+adv_total = 0
 for f in glob.iglob(args.input_path + "validation/val/*"):
     if i not in index_test:
         i = i + 1
@@ -99,9 +99,6 @@ for f in glob.iglob(args.input_path + "validation/val/*"):
     pred = net.blobs['prob'].data[0]
     pred_ids = np.argsort(pred)[-5:][::-1]
 
-    #print("Top 1 prediction: ",  label_dict[str(pred_ids[0])][1], ", Confidence score: ", str(np.max(pred)))
-    #print("Top 5 predictions: ", [label_dict[str(pred_ids[k])][1] for k in range(5)])
-
     correct = correct + (label_dict[str(pred_ids[0])][0] in f)
 
     net.blobs['data'].reshape(*adv_img.shape)
@@ -112,18 +109,17 @@ for f in glob.iglob(args.input_path + "validation/val/*"):
     adv_pred = net.blobs['prob'].data[0]
     adv_pred_ids = np.argsort(adv_pred)[-5:][::-1]
 
-    #print("Adv Top 1 prediction: ",  label_dict[str(adv_pred_ids[0])][1], ", Confidence score: ", str(np.max(pred)))
-    #print("Adv Top 5 predictions: ", [label_dict[str(adv_pred_ids[k])][1] for k in range(5)])
-
     adv_correct = adv_correct + (label_dict[str(adv_pred_ids[0])][0] in f)
-    adv_success = adv_success + (adv_pred_ids[0] == args.target_class)
+
+    if args.target_class != label_dict[str(pred_ids[0])][0]:
+        adv_success = adv_success + (adv_pred_ids[0] == args.target_class)
+        adv_total = adv_total + 1
 
     total = total + 1
-
     if total % 100 == 0:
-        print('sample: {}, acc: {:.2f}, adv acc: {:.2f}, asr: {:.2f}.'.format(total, correct / total * 100.,
-                                                          adv_correct / total * 100., adv_success / total * 100.))
+        print('sample: {}, acc: {:.2f}, adv acc: {:.2f}, asr: {:.2f}.'
+              .format(total, correct / total * 100., adv_correct / total * 100., adv_success / adv_total * 100.))
 
 print('Clean sample top 1 accuracy: {:.2f}%'.format(correct / total * 100.))
 print('Adv sample top 1 accuracy: {:.2f}%'.format(adv_correct / total * 100.))
-print('Attack success rate: {:.2f}%'.format(adv_success / total * 100.))
+print('Attack success rate: {:.2f}%'.format(adv_success / adv_total * 100.))
